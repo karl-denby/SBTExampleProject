@@ -48,19 +48,14 @@ object QuickTour {
 
     //TODO: Update the connection string
     val mongoClientSettings: MongoClientSettings = MongoClientSettings.builder()
-      .applyConnectionString(new ConnectionString("mongodb+srv://<USER>:<PASSWORD>@<CLUSTER>/test?retryWrites=true"))
+      .applyConnectionString(new ConnectionString(args.head))
       .streamFactoryFactory(NettyStreamFactoryFactory())
       .applyToSslSettings(b => b.enabled(true))
       .build()
 
-    val mongoClient: MongoClient = if (args.isEmpty) MongoClient(mongoClientSettings) else MongoClient(args.head)
-
-    // get handle to "mydb" database
+    val mongoClient: MongoClient = if (args.isEmpty) MongoClient() else MongoClient(mongoClientSettings)
     val database: MongoDatabase = mongoClient.getDatabase("people")
-
-    // get a handle to the "test" collection
     val collection: MongoCollection[Document] = database.getCollection("person")
-
     collection.drop().results()
 
     // make a document and insert it
@@ -68,8 +63,6 @@ object QuickTour {
       "count" -> 1, "info" -> Document("x" -> 203, "y" -> 102))
 
     collection.insertOne(doc).results()
-
-    // get it (since it's the only one in there since we dropped the rest earlier on)
     collection.find.first().printResults()
 
     // now, lets add lots of little documents to the collection so we can explore queries and cursors
@@ -82,17 +75,11 @@ object QuickTour {
     } yield countResult
 
     println(s"total # of documents after inserting 100 small ones (should be 101):  ${insertAndCount.headResult()}")
-
     collection.find().first().printHeadResult()
 
     // Query Filters
-    // now use a query to get 1 document out
     collection.find(equal("i", 71)).first().printHeadResult()
-
-    // now use a range query to get a larger subset
     collection.find(gt("i", 50)).printResults()
-
-    // range query with multiple constraints
     collection.find(and(gt("i", 50), lte("i", 100))).printResults()
 
     // Sorting
@@ -118,7 +105,6 @@ object QuickTour {
 
     // Delete Many
     collection.deleteMany(gte("i", 100)).printHeadResult("Delete Result: ")
-
     collection.drop().results()
 
     // ordered bulk writes
@@ -140,7 +126,7 @@ object QuickTour {
     collection.find().printResults("Documents in collection: ")
 
     // Clean up
-    //collection.drop().results()
+    collection.drop().results()
 
     // release resources
     mongoClient.close()
