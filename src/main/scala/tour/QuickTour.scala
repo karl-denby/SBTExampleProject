@@ -46,16 +46,18 @@ object QuickTour {
     */
   def main(args: Array[String]): Unit = {
 
-    //TODO: Update the connection string
-    val mongoClientSettings: MongoClientSettings = MongoClientSettings.builder()
-      .applyConnectionString(new ConnectionString(args.head))
-      .streamFactoryFactory(NettyStreamFactoryFactory())
-      .applyToSslSettings(b => b.enabled(true))
-      .build()
+    // param = setup for con to Atlas, no param = localhost
+    val settings: MongoClientSettings =
+      if (!args.isEmpty) MongoClientSettings.builder()
+        .applyConnectionString(new ConnectionString(args.head))
+        .streamFactoryFactory(NettyStreamFactoryFactory())
+        .applyToSslSettings(b => b.enabled(true))
+        .build()
+      else MongoClientSettings.builder().build()
 
-    val mongoClient: MongoClient = if (args.isEmpty) MongoClient() else MongoClient(mongoClientSettings)
-    val database: MongoDatabase = mongoClient.getDatabase("people")
-    val collection: MongoCollection[Document] = database.getCollection("person")
+    val mongoClient: MongoClient = if (args.isEmpty) MongoClient() else MongoClient(settings)
+    val database: MongoDatabase = mongoClient.getDatabase("scala")
+    val collection: MongoCollection[Document] = database.getCollection("tour")
     collection.drop().results()
 
     // make a document and insert it
@@ -66,7 +68,7 @@ object QuickTour {
     collection.find.first().printResults()
 
     // now, lets add lots of little documents to the collection so we can explore queries and cursors
-    val documents: IndexedSeq[Document] = (1 to 100) map { i: Int => Document("i" -> i) }
+    val documents: IndexedSeq[Document] = (1 to 10000) map { i: Int => Document("i" -> i) }
     val insertObservable = collection.insertMany(documents)
 
     val insertAndCount = for {
